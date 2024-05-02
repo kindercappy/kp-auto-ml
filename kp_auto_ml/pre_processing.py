@@ -22,6 +22,9 @@ class PreLabelEncoderConfig():
 class PreNumericColDataChangeConfig():
     column_name = None
     data_type = None
+    def __init__(self,col_name,data_type) -> None:
+        self.column_name = col_name
+        self.data_type = data_type
 
 class PreProcessingConfig():
     encoding_dummies:list[str]

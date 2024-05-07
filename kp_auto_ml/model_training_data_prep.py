@@ -73,11 +73,18 @@ class ModelTrainingData():
     Polynomializer = None
     PCAlizer = None
     Data_transformer_pipe:Pipeline = None
+
+    Use_PCA = False
+    Use_Polynomials = False
     def __init__(self
                  ,df:pd.DataFrame
                  ,scaler_type:ScalerType
-                 ,pca_variance = .95
+                 ,pca_variance = .95,
+                 use_pca = False,
+                 use_polynomials = False
                  ) -> None:
+        self.Use_PCA = use_pca
+        self.Use_Polynomials = use_polynomials
         self.X,self.Y = get_x_y(df=df)
         self.X_original = self.X.copy(deep=True)
         self.num_features = self.X_original.shape[1]
@@ -91,10 +98,13 @@ class ModelTrainingData():
         self.PCAlizer = PCA(n_components=pca_variance)
 
         pipeline = Pipeline([
-            ('scaler', self.Normalizer),  # StandardScaler for scaling
-            # ('poly_features', self.Polynomializer),  # Example degree of 2, adjust as needed
-            # ('pca', self.PCAlizer)  # Retain 95% of variance, adjust as needed
+            ('scaler', self.Normalizer)
         ])
+        if(self.Use_Polynomials):
+            pipeline.steps.append(('poly_features', self.Polynomializer))
+        if(self.Use_PCA):
+            pipeline.steps.append(('pca', self.PCAlizer))
+            
         self.Data_transformer_pipe = pipeline
         
         if len(self.Data_transformer_pipe.steps) > 1:

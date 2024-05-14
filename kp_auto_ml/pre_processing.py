@@ -39,8 +39,8 @@ class PreProcessingConfig():
             ,encoding_dummies:list[str]
             ,label_encode:list[PreLabelEncoderConfig]
             ,numeric_cols_data_changer:list[PreNumericColDataChangeConfig]
-            ,target_column
             ,exclude_columns
+            ,target_column = None
             ):
         self.encoding_dummies = encoding_dummies
         self.label_encode = label_encode
@@ -120,7 +120,18 @@ def process(df:pd.DataFrame,model_config:PreProcessingConfig):
     df_preprocessing = df_preprocessing[[col for col in df_preprocessing.columns if col != model_config.target_column] + [model_config.target_column]]
     return df_preprocessing.reset_index(drop=True)
 
+def process_test(df:pd.DataFrame,model_config:PreProcessingConfig):
 
+    df_preprocessing = dropping_cols_rows(df)
+    df_preprocessing = df_preprocessing.drop(columns=model_config.exclude_columns)
+    df_preprocessing = null_unsuable_values_cleaner(df_preprocessing)
+    df_preprocessing = fillna(df_preprocessing)
+    # df_preprocessing = handle_outliers_iqr(df_preprocessing,model_config.target_column)
+    df_preprocessing = numeric_columns_data_changer(df_preprocessing, model_config.numeric_cols_data_changer)
+    df_preprocessing = label_encoding(df_preprocessing,model_config.label_encode)
+    df_preprocessing = encoding_dummies(df_preprocessing, model_config.encoding_dummies)
+    # df_preprocessing = df_preprocessing[[col for col in df_preprocessing.columns if col != model_config.target_column] + [model_config.target_column]]
+    return df_preprocessing.reset_index(drop=True)
 
 def dropping_cols_rows(df,threshold = .7):
     print(f'Dropping columns whose values are nullable greater than {threshold}')

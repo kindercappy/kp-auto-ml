@@ -50,7 +50,7 @@ def get_parameters_ridge_fit(power:ModelPower):
 
 
 class ModelAndParam(Enum):
-    Linear_Regression= LinearRegression
+    Linear_Regression=LinearRegression
     Ridge_Regression=Ridge
 
 def get_model_and_param(power:ModelPower,model_and_param:ModelAndParam):
@@ -110,27 +110,37 @@ def insert_object_columns(df, obj:ModelPerformance):
     
     return df_new
 
-from sklearn.metrics import mean_squared_error as _mean_squared_error
-from sklearn.metrics import root_mean_squared_error as _root_mean_squared_error
 
-
+class ModelMeta():
+    model = None
+    model_params = None
+    def __init__(self,model,params) -> None:
+        self.model = model
+        self.model_params = params
 
 class ModelTrainer():
     performance_df:pd.DataFrame = None
     data:dp.ModelTrainingData = None
+    models:list[ModelMeta] = []
+
     def __init__(self,data:dp.ModelTrainingData) -> None:
         self.data = data
 
-    def perform_operation(self):
+    def perform_operation(self,permutate_n_less_column = 0,exclude_models: list[ModelAndParam] = []):
         for scaler in ModelAndParam:
+            skip_this_model = any(exclude_model.name == scaler.name for exclude_model in exclude_models)
+            if(skip_this_model):
+                continue
             model,param =get_model_and_param(power=ModelPower.HIGH,model_and_param=scaler)
-            for X_train, X_val, X_test in self.data.generate_permutations_train(min_columns=len(self.data.X_original.columns)-1):
+            for X_train, X_val, X_test in self.data.generate_permutations_train(min_columns=len(self.data.X_train.columns)-permutate_n_less_column):
                 best_param,best_model,score = train_test_random_search_regression(model=model,param_distributions=param,X_train=X_train,y_train=self.data.Y_train,X_test=X_val,y_test=self.data.Y_val)
-                
+
                 y_pred = best_model.predict(X_test)
+                
                 from sklearn.metrics import mean_squared_error
 
                 rmse = mean_squared_error(self.data.Y_test, y_pred, squared=False)
                 model_performance = ModelPerformance(score=score,model_name=scaler.name,RMSE=rmse)
+                self.models.append(ModelMeta(best_model,best_param))
                 self.performance_df = insert_object_columns(self.performance_df,model_performance)
     

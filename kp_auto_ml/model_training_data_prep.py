@@ -134,6 +134,9 @@ class ModelTrainingData():
                     X_test_permuted = self.Data_transformer_pipe.transform(self.X_test_df.loc[:, selected_columns])
                 yield X_train_permuted, X_val_permuted, X_test_permuted
 
+    def transform_test_data(self,df:pd.DataFrame):
+        return self.Data_transformer_pipe.transform(df)
+
 
 
 

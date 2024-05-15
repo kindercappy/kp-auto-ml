@@ -105,7 +105,7 @@ class ModelTrainer():
     def __init__(self,data:dp.ModelTrainingData) -> None:
         self.data = data
 
-    def perform_operation_regression(self,permutate_n_less_column = 0,exclude_models: list[mlh.ModelAndParam] = []):
+    def perform_operation_regression(self, permutate_n_less_column = 0, exclude_models: list[mlh.ModelAndParam] = []):
         for scaler in mlh.ModelAndParam:
             skip_this_model = any(exclude_model.name == scaler.name for exclude_model in exclude_models)
             if(skip_this_model):

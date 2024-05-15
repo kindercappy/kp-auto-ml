@@ -8,6 +8,7 @@ from sklearn.pipeline import Pipeline
 import itertools
 from itertools import combinations
 import math
+from kp_auto_ml import model_feature_selector as mfs
 
 
 def get_x_y(df:pd.DataFrame):
@@ -76,15 +77,28 @@ class ModelTrainingData():
 
     Use_PCA = False
     Use_Polynomials = False
+    Use_Feature_Selection = False
+    Selected_Features = []
     def __init__(self
                  ,df:pd.DataFrame
                  ,scaler_type:ScalerType
                  ,pca_variance = .95,
                  use_pca = False,
-                 use_polynomials = False
+                 use_polynomials = False,
+                 use_feature_selection = False
                  ) -> None:
         self.Use_PCA = use_pca
         self.Use_Polynomials = use_polynomials
+        self.Use_Feature_Selection = use_feature_selection
+        if(self.Use_Feature_Selection):
+            tempX,tempY = get_x_y(df=df)
+            columns_after_feature_selection = mfs.Run_Features_Selection(tempX,tempY)
+            columns_after_feature_selection.append(tempY.name)# we need to add target column back to dataframe
+            printable_names = ', '.join(columns_after_feature_selection)
+            print(f'Total columns :{len(df.columns)}')
+            print(f'Selected number of columns: {len(columns_after_feature_selection)}')
+            print(f'Columns to use: {printable_names}')
+            df = df[columns_after_feature_selection]
         self.X,self.Y = get_x_y(df=df)
         self.X_original = self.X.copy(deep=True)
         self.num_features = self.X_original.shape[1]
@@ -97,6 +111,7 @@ class ModelTrainingData():
         self.Polynomializer = PolynomialFeatures(degree=2)
         self.PCAlizer = PCA(n_components=pca_variance)
 
+        total_columns = len(self.X_original.columns)
         pipeline = Pipeline([
             ('scaler', self.Normalizer)
         ])
@@ -104,6 +119,9 @@ class ModelTrainingData():
             pipeline.steps.append(('poly_features', self.Polynomializer))
         if(self.Use_PCA):
             pipeline.steps.append(('pca', self.PCAlizer))
+            total_columns = pca_variance
+        
+        
             
         self.Data_transformer_pipe = pipeline
         
@@ -113,7 +131,9 @@ class ModelTrainingData():
             self.X_train = self.Data_transformer_pipe.transform(self.X_train)
             self.X_test = self.Data_transformer_pipe.transform(self.X_test)
             self.X_val = self.Data_transformer_pipe.transform(self.X_val)
-    
+
+        total_columns = len(self.X[0])
+        print(f'Total columns being used after all data transformations: {total_columns}')
     def generate_permutations_train(self, min_columns):
         num_features = self.X_original.shape[1]
         total_permutations = sum(len(list(combinations(range(num_features), r))) for r in range(min_columns, num_features + 1))
@@ -136,6 +156,9 @@ class ModelTrainingData():
 
     def transform_test_data(self,df:pd.DataFrame):
         return self.Data_transformer_pipe.transform(df)
+    
+    def run_feature_selection(self):
+        print('')
 
 
 

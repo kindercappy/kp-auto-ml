@@ -3,6 +3,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.linear_model import Lasso
+from kp_auto_ml import model_list_helper as mlh
+from sklearn.model_selection import RandomizedSearchCV
 
 
 def feature_importance_end_model_builder(feature_importance_dataframe,columns):
@@ -20,7 +22,7 @@ def run_feature_selection(df):
 
 def RandomForestFeaturesSelection(X:pd.DataFrame,Y:pd.Series):
     print('Executing RandomForestFeaturesSelection function to get the best features that are used in training the model.')
-    model = RandomForestClassifier(random_state=1,criterion = 'entropy', max_depth=3)
+    model = RandomSearch_Selector(*mlh.get_parameters_random_forest_fit_reg(mlh.ModelPower.HIGH),X_train=X,y_train=Y)
     model.fit(X, Y)
     feature_importance = model.feature_importances_
     feature_importance_dataframe = pd.DataFrame(feature_importance)
@@ -31,7 +33,7 @@ def RandomForestFeaturesSelection(X:pd.DataFrame,Y:pd.Series):
 
 def DecisionTreeClassifierFeaturesSelection(X:pd.DataFrame,Y:pd.Series):
     print('Executing DecisionTreeClassifierFeaturesSelection function to get the best features that are used in training the model.')
-    model = DecisionTreeClassifier(random_state=0, max_depth=3)
+    model = RandomSearch_Selector(*mlh.get_parameters_decision_tree_fit_reg(mlh.ModelPower.HIGH),X_train=X,y_train=Y)
     model.fit(X, Y)
     feature_importance = model.feature_importances_
     feature_importance_dataframe = pd.DataFrame(feature_importance)
@@ -42,7 +44,7 @@ def DecisionTreeClassifierFeaturesSelection(X:pd.DataFrame,Y:pd.Series):
 
 def LassoFeaturesSelection(X:pd.DataFrame,Y:pd.Series):
     print('Executing LassoFeaturesSelection function to get the best features that are used in training the model.')
-    model = Lasso(alpha=0.01)
+    model = RandomSearch_Selector(*mlh.get_parameters_lasso_fit(mlh.ModelPower.HIGH),X_train=X,y_train=Y)
     model.fit(X, Y)
     feature_importance = model.coef_
     feature_importance_dataframe = pd.DataFrame(feature_importance)
@@ -50,22 +52,31 @@ def LassoFeaturesSelection(X:pd.DataFrame,Y:pd.Series):
     temp2 = beautified_df[beautified_df['value'] > 0].sort_values(by='value',ascending=False).reset_index(drop='index')
     return temp2.column_name.values
 
+def RandomSearch_Selector(param_distributions,model, X_train, y_train, scoring='r2', cv=5):
+    total_combinations = 1
+    for values in param_distributions.values():
+        total_combinations *= len(values)
+    # Set n_iter based on the total_combinations
+    n_iter = min(total_combinations, 10)
+
+    random_search = RandomizedSearchCV(estimator=model, param_distributions=param_distributions,n_iter=n_iter, scoring=scoring, cv=cv, random_state=42)
+    random_search.fit(X_train, y_train)
+    
+    best_model = random_search.best_estimator_
+    
+    return best_model
 
 def Run_Features_Selection(X:pd.DataFrame,Y:pd.Series):
     array1 = RandomForestFeaturesSelection(X,Y)
     array2 = DecisionTreeClassifierFeaturesSelection(X,Y)
     array3 = LassoFeaturesSelection(X,Y)
-    # Initialize an empty list to hold the combined values
     combined_array = []
 
-    # Extend the combined_array with each array
     combined_array.extend(array1)
     combined_array.extend(array2)
     combined_array.extend(array3)
 
-    # Get distinct values using set()
     distinct_values = set(combined_array)
 
-    # Convert the set back to a list if needed
     distinct_values_list = list(distinct_values)
     return distinct_values_list

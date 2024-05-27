@@ -4,12 +4,12 @@ from sklearn.linear_model import LinearRegression
 from sklearn.linear_model import Ridge
 from kp_auto_ml import model_training_data_prep as dp
 from kp_auto_ml import model_training_helper as mth
-
+from kp_auto_ml import neural_network_regression as nnr
 from enum import Enum
 import pandas as pd
 from sklearn.metrics import mean_squared_error
 import warnings
-
+from bayes_opt import BayesianOptimization
 from kp_auto_ml import model_list_helper as mlh
 
 # Filter out specific warning messages
@@ -66,7 +66,6 @@ def train_test_random_search_regression(model, param_distributions, X_train, y_t
     
     return best_params, best_model, test_score
 
-
 class ModelPerformance():
     score = None
     model_name = None
@@ -93,33 +92,76 @@ def insert_object_columns(df, obj:ModelPerformance):
 class ModelMeta():
     model = None
     model_params = None
+    
     def __init__(self,model,params) -> None:
         self.model = model
         self.model_params = params
+
+class NeuralNetwork_BayesianOptimization():
+    nn_maximised:BayesianOptimization = None
+    nn_regressor:nnr.NeuralNetwork_Regression = None
 
 class ModelTrainer():
     performance_df:pd.DataFrame = None
     data:dp.ModelTrainingData = None
     models:list[ModelMeta] = []
-
+    neural_network_bayesian_optimization:NeuralNetwork_BayesianOptimization = None
     def __init__(self,data:dp.ModelTrainingData) -> None:
         self.data = data
+        self.neural_network_bayesian_optimization = NeuralNetwork_BayesianOptimization()
 
     def perform_operation_regression(self, permutate_n_less_column = 0, exclude_models: list[mlh.ModelAndParam] = []):
-        for scaler in mlh.ModelAndParam:
-            skip_this_model = any(exclude_model.name == scaler.name for exclude_model in exclude_models)
+        for model_and_param in mlh.ModelAndParam:
+            skip_this_model = any(exclude_model.name == model_and_param.name for exclude_model in exclude_models)
             if(skip_this_model):
                 continue
-            model,param =get_model_and_param(power=mlh.ModelPower.HIGH,model_and_param=scaler)
+            model,param =get_model_and_param(power=mlh.ModelPower.HIGH,model_and_param=model_and_param)
             for X_train, X_val, X_test in self.data.generate_permutations_train(min_columns=len(self.data.X_original.columns)-permutate_n_less_column):
                 best_param,best_model,score = train_test_random_search_regression(model=model,param_distributions=param,X_train=X_train,y_train=self.data.Y_train,X_test=X_val,y_test=self.data.Y_val)
 
-                y_pred = best_model.predict(X_test)
-                
-                from sklearn.metrics import mean_squared_error
+                self.predictor(model_and_param.name, X_test, best_param, best_model, score)
 
-                rmse = mean_squared_error(self.data.Y_test, y_pred, squared=False)
-                model_performance = ModelPerformance(score=score,model_name=scaler.name,RMSE=rmse)
-                self.models.append(ModelMeta(best_model,best_param))
-                self.performance_df = insert_object_columns(self.performance_df,model_performance)
+    def predictor(self, model_name, best_param, best_model, score):
+        y_pred = best_model.predict(self.data.X_test)
+                
+        from sklearn.metrics import mean_squared_error
+
+        rmse = mean_squared_error(self.data.Y_test, y_pred, squared=False)
+        model_performance = ModelPerformance(score=score,model_name=model_name,RMSE=rmse)
+        self.models.append(ModelMeta(best_model,best_param))
+        self.performance_df = insert_object_columns(self.performance_df,model_performance)
+
+    def perform_neural_network_regression(self):
+
+        self.neural_network_bayesian_optimization = NeuralNetwork_BayesianOptimization()
+        self.neural_network_bayesian_optimization.nn_regressor =  nnr.NeuralNetwork_Regression(self.data)
+        params_nn ={
+            'neurons': (10, 100),
+            'activation':(0, 9),
+            'optimizer':(0,6),
+            'learning_rate':(0.01, 1),
+            'batch_size':(200, 1000),
+            'epochs':(20, 100),
+            'layers1':(1,3),
+            'layers2':(1,3),
+            'normalization':(0,1),
+            'dropout':(0,1),
+            'dropout_rate':(0,0.3)
+        }
+        # Run Bayesian Optimization
+        nn_bo = BayesianOptimization(self.neural_network_bayesian_optimization.nn_regressor.nn_cl_bo2, params_nn, random_state=111)
+        nn_bo.maximize(init_points=2, n_iter=2)
+
+        self.neural_network_bayesian_optimization.nn_maximised = nn_bo
+
+    def neural_network_best_model(self):
+        params_nn = self.neural_network_bayesian_optimization.nn_maximised.max['params']
+        
+        predictor = self.neural_network_bayesian_optimization.nn_regressor.get_best_model(params_nn)
+        predictor.fit(self.data.X_train, self.data.Y_train)
+    
+        test_score = predictor.score(self.data.X_test, self.data.Y_test)
+
+        self.predictor(model_name='NeuralNetwork',best_model=predictor,best_param=predictor.get_params(),score=test_score)
+
     

@@ -123,7 +123,7 @@ def get_parameters_decision_tree_fit_reg(power):
         'max_depth': max_depth_options,
         'min_samples_split': min_samples_split_options,
         'min_samples_leaf': [1, 2, 4],
-        'max_features': ['auto', 'sqrt', 'log2']
+        'max_features': ['sqrt', 'log2']
     }
     print(f'DecisionTree params: {decision_tree_hyper_params}')
     return decision_tree_hyper_params, DecisionTreeRegressor()
@@ -154,7 +154,7 @@ def get_parameters_random_forest_fit_reg(power):
         'max_depth': max_depth_options,
         'min_samples_split': min_samples_split_options,
         'min_samples_leaf': [1, 2, 4],
-        'max_features': ['auto', 'sqrt', 'log2']
+        'max_features': ['sqrt', 'log2']
     }
     print(f'RandomForest params: {random_forest_hyper_params}')
     return random_forest_hyper_params, RandomForestRegressor()

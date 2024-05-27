@@ -99,6 +99,7 @@ class ModelTrainingData():
             print(f'Selected number of columns: {len(columns_after_feature_selection)}')
             print(f'Columns to use: {printable_names}')
             df = df[columns_after_feature_selection]
+            self.Selected_Features = columns_after_feature_selection
         self.X,self.Y = get_x_y(df=df)
         self.X_original = self.X.copy(deep=True)
         self.num_features = self.X_original.shape[1]
@@ -132,7 +133,11 @@ class ModelTrainingData():
             self.X_test = self.Data_transformer_pipe.transform(self.X_test)
             self.X_val = self.Data_transformer_pipe.transform(self.X_val)
 
-        total_columns = len(self.X[0])
+        try:
+            total_columns = len(self.X[0])
+        except:
+            total_columns = len(self.X.columns)
+
         print(f'Total columns being used after all data transformations: {total_columns}')
     def generate_permutations_train(self, min_columns):
         num_features = self.X_original.shape[1]
@@ -156,10 +161,6 @@ class ModelTrainingData():
 
     def transform_test_data(self,df:pd.DataFrame):
         return self.Data_transformer_pipe.transform(df)
-    
-    def run_feature_selection(self):
-        print('')
-
 
 
 

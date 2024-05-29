@@ -1,16 +1,16 @@
-from kp_auto_ml import model_training_data_prep as dp
+from auto_ml_kinder import model_training_data_prep as dp
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.linear_model import LinearRegression
 from sklearn.linear_model import Ridge
-from kp_auto_ml import model_training_data_prep as dp
-from kp_auto_ml import model_training_helper as mth
-from kp_auto_ml import neural_network_regression as nnr
+from auto_ml_kinder import model_training_data_prep as dp
+from auto_ml_kinder import model_training_helper as mth
+from auto_ml_kinder import neural_network_regression as nnr
 from enum import Enum
 import pandas as pd
 from sklearn.metrics import mean_squared_error
 import warnings
 from bayes_opt import BayesianOptimization
-from kp_auto_ml import model_list_helper as mlh
+from auto_ml_kinder import model_list_helper as mlh
 
 # Filter out specific warning messages
 warnings.filterwarnings('ignore', category=DeprecationWarning)
@@ -101,6 +101,39 @@ class NeuralNetwork_BayesianOptimization():
     nn_maximised:BayesianOptimization = None
     nn_regressor:nnr.NeuralNetwork_Regression = None
 
+class NeuralNetwork_BayesianOptimization_Params():
+    neurons_min_max = None
+    activation_min_max = None
+    optimizer_min_max = None
+    learning_rate_min_max = None
+    batch_size_min_max = None
+    epochs_min_max = None
+    normalization_min_max = None
+    dropout_rate_min_max = None
+    dropout_min_max = None
+    hidden_layers_min_max = None
+
+    def __init__(self
+                 ,neurons_min_max = (32, 128)
+                 ,learning_rate_min_max = (0.001, .01)
+                 ,batch_size_min_max = (32, 64)
+                 ,epochs_min_max = (50, 100)
+                 ,normalization_min_max = (0,1)
+                 ,dropout_rate_min_max = (0.2,0.6)
+                 ,hidden_layers_min_max = (1,2)
+                 ,dropout_min_max = (0,1)):
+        self.neurons_min_max = neurons_min_max
+        self.activation_min_max = (0, 9)
+        self.optimizer_min_max = (0,6)
+        self.learning_rate_min_max = learning_rate_min_max
+        self.batch_size_min_max = batch_size_min_max
+        self.epochs_min_max = epochs_min_max
+        self.normalization_min_max = normalization_min_max
+        self.dropout_min_max = dropout_min_max
+        self.dropout_rate_min_max = dropout_rate_min_max
+        self.hidden_layers_min_max = hidden_layers_min_max
+        
+
 class ModelTrainer():
     performance_df:pd.DataFrame = None
     data:dp.ModelTrainingData = None
@@ -119,7 +152,7 @@ class ModelTrainer():
             for X_train, X_val, X_test in self.data.generate_permutations_train(min_columns=len(self.data.X_original.columns)-permutate_n_less_column):
                 best_param,best_model,score = train_test_random_search_regression(model=model,param_distributions=param,X_train=X_train,y_train=self.data.Y_train,X_test=X_val,y_test=self.data.Y_val)
 
-                self.predictor(model_and_param.name, X_test, best_param, best_model, score)
+                self.predictor(model_and_param.name, best_param, best_model, score)
 
     def predictor(self, model_name, best_param, best_model, score):
         y_pred = best_model.predict(self.data.X_test)
@@ -131,28 +164,37 @@ class ModelTrainer():
         self.models.append(ModelMeta(best_model,best_param))
         self.performance_df = insert_object_columns(self.performance_df,model_performance)
 
-    def perform_neural_network_regression(self):
+    def perform_neural_network_regression(self
+                                          ,totalExperiments = 4
+                                          ,params:NeuralNetwork_BayesianOptimization_Params = NeuralNetwork_BayesianOptimization_Params(
+                                              neurons_min_max= (32, 128),
+                                              batch_size_min_max=(32, 64),
+                                              dropout_rate_min_max=(0.2,0.6),
+                                              epochs_min_max=(50, 100),
+                                              hidden_layers_min_max=(1,6),
+                                              learning_rate_min_max=(0.001, .01),
+                                              normalization_min_max=(0,1)
+                                          )):
+        PARAMS = {
+            'neurons': params.neurons_min_max,
+            'activation':params.activation_min_max,
+            'optimizer':params.optimizer_min_max,
+            'learning_rate':params.learning_rate_min_max,
+            'batch_size':params.batch_size_min_max,
+            'epochs':params.epochs_min_max,
+            'normalization':params.normalization_min_max,
+            'dropout':params.dropout_min_max,
+            'dropout_rate':params.dropout_rate_min_max,
+            'hidden_layers':params.hidden_layers_min_max
+        }
 
         self.neural_network_bayesian_optimization = NeuralNetwork_BayesianOptimization()
         self.neural_network_bayesian_optimization.nn_regressor =  nnr.NeuralNetwork_Regression(self.data)
-        params_nn ={
-            'neurons': (10, 100),
-            'activation':(0, 9),
-            'optimizer':(0,6),
-            'learning_rate':(0.01, 1),
-            'batch_size':(200, 1000),
-            'epochs':(20, 100),
-            'layers1':(1,3),
-            'layers2':(1,3),
-            'normalization':(0,1),
-            'dropout':(0,1),
-            'dropout_rate':(0,0.3)
-        }
+        
         # Run Bayesian Optimization
-        nn_bo = BayesianOptimization(self.neural_network_bayesian_optimization.nn_regressor.nn_cl_bo2, params_nn, random_state=111)
-        nn_bo.maximize(init_points=2, n_iter=2)
-
-        self.neural_network_bayesian_optimization.nn_maximised = nn_bo
+        self.neural_network_bayesian_optimization.nn_maximised = BayesianOptimization(self.neural_network_bayesian_optimization.nn_regressor.nn_cl_bo2, PARAMS, random_state=111,verbose=2)
+        init,iter = int(totalExperiments / 2),int(totalExperiments / 2)
+        self.neural_network_bayesian_optimization.nn_maximised.maximize(init_points=init, n_iter=iter)
 
     def neural_network_best_model(self):
         params_nn = self.neural_network_bayesian_optimization.nn_maximised.max['params']

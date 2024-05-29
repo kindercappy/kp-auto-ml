@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='kp_auto_ml',
+    name='auto_ml_kinder',
     version='1.0.0',
     description='Auto ML Package',
     author='Kindepreet Singh',

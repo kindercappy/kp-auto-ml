@@ -8,7 +8,7 @@ from sklearn.pipeline import Pipeline
 import itertools
 from itertools import combinations
 import math
-from kp_auto_ml import model_feature_selector as mfs
+from auto_ml_kinder import model_feature_selector as mfs
 
 
 def get_x_y(df:pd.DataFrame):

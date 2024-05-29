@@ -3,7 +3,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.linear_model import Lasso
-from kp_auto_ml import model_list_helper as mlh
+from auto_ml_kinder import model_list_helper as mlh
 from sklearn.model_selection import RandomizedSearchCV
 
 

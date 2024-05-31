@@ -19,7 +19,7 @@ def get_parameters_linear_reg():
     linear_reg_hyper_params = {
         'fit_intercept': [True, False]
     }
-    print(f'LinearRegression params: {linear_reg_hyper_params}')
+    # print(f'LinearRegression params: {linear_reg_hyper_params}')
     return linear_reg_hyper_params, LinearRegression()
 
 def get_parameters_ridge_fit(power:ModelPower):
@@ -37,7 +37,7 @@ def get_parameters_ridge_fit(power:ModelPower):
         'alpha': alpha_options,
         'solver': ['auto', 'svd', 'cholesky', 'lsqr', 'sparse_cg', 'sag', 'saga']
     }
-    print(f'Ridge params: {ridge_hyper_params}')
+    # print(f'Ridge params: {ridge_hyper_params}')
     return ridge_hyper_params, Ridge()
 
 def get_parameters_lasso_fit(power):
@@ -55,7 +55,7 @@ def get_parameters_lasso_fit(power):
         'alpha': alpha_options,
         'selection': ['cyclic', 'random']
     }
-    print(f'Lasso params: {lasso_hyper_params}')
+    # print(f'Lasso params: {lasso_hyper_params}')
     return lasso_hyper_params, Lasso()
 
 def get_parameters_elasticnet_fit(power):
@@ -76,7 +76,7 @@ def get_parameters_elasticnet_fit(power):
         # 'normalize': [True, False],
         'selection': ['cyclic', 'random']
     }
-    print(f'ElasticNet params: {elasticnet_hyper_params}')
+    # print(f'ElasticNet params: {elasticnet_hyper_params}')
     return elasticnet_hyper_params, ElasticNet()
 
 def get_parameters_svr_fit(power):
@@ -100,7 +100,7 @@ def get_parameters_svr_fit(power):
         'epsilon': epsilon_options,
         'gamma': ['scale', 'auto']
     }
-    print(f'SVR params: {svr_hyper_params}')
+    # print(f'SVR params: {svr_hyper_params}')
     return svr_hyper_params, SVR()
 
 def get_parameters_decision_tree_fit_reg(power):
@@ -125,7 +125,7 @@ def get_parameters_decision_tree_fit_reg(power):
         'min_samples_leaf': [1, 2, 4],
         'max_features': ['sqrt', 'log2']
     }
-    print(f'DecisionTree params: {decision_tree_hyper_params}')
+    # print(f'DecisionTree params: {decision_tree_hyper_params}')
     return decision_tree_hyper_params, DecisionTreeRegressor()
 
 def get_parameters_random_forest_fit_reg(power):
@@ -156,7 +156,7 @@ def get_parameters_random_forest_fit_reg(power):
         'min_samples_leaf': [1, 2, 4],
         'max_features': ['sqrt', 'log2']
     }
-    print(f'RandomForest params: {random_forest_hyper_params}')
+    # print(f'RandomForest params: {random_forest_hyper_params}')
     return random_forest_hyper_params, RandomForestRegressor()
 
 def get_parameters_gradient_boosting_fit_reg(power):
@@ -193,7 +193,7 @@ def get_parameters_gradient_boosting_fit_reg(power):
         'min_samples_leaf': [1, 2, 4],
         'max_features': ['auto', 'sqrt', 'log2']
     }
-    print(f'GradientBoosting params: {gradient_boosting_hyper_params}')
+    # print(f'GradientBoosting params: {gradient_boosting_hyper_params}')
     return gradient_boosting_hyper_params, GradientBoostingRegressor()
 
 def get_parameters_knn_reg(power):
@@ -213,7 +213,7 @@ def get_parameters_knn_reg(power):
         'n_neighbors': n_neighbors_values,
         'weights': weights_options
     }
-    print(f'KNN params: {knn_reg_hyper_params}')
+    # print(f'KNN params: {knn_reg_hyper_params}')
     return knn_reg_hyper_params, KNeighborsRegressor()
 
 

@@ -82,8 +82,7 @@ class NeuralNetwork_Regression():
             , 'Nadam'
             , 'Ftrl'
             ]
-        activationL = ['relu', 'sigmoid', 'softplus', 'softsign', 'tanh', 'selu',
-                    'elu', 'exponential', LeakyReLU,'relu']
+        activationL = ['relu',LeakyReLU, 'selu','elu','sigmoid','softplus','softsign','tanh','exponential']
         neurons = round(neurons)
         activation = activationL[round(activation)]
         optimizer = optimizerL[round(optimizer)].lower()
@@ -109,13 +108,13 @@ class NeuralNetwork_Regression():
         kfold = StratifiedKFold(n_splits=5, shuffle=True, random_state=123)
         score = cross_val_score(nn, self.data.X_train, self.data.Y_train, scoring=mse_scorer, cv=kfold, fit_params={'callbacks':[es,lr_scheduler]}).mean()
         import math
-        return -(np.random.rand() * 1e30) if math.isnan(score) else -score # return large float if nan cz we cant show loss as 0
+        score = round(score,1)
+        return -((np.random.rand() * 1e30) if math.isnan(score) else score) # return large float if nan cz we cant show loss as 0
     
     def get_best_model(self,params):
         params_nn_ = params
         learning_rate = params_nn_['learning_rate']
-        activationL = ['relu', 'sigmoid', 'softplus', 'softsign', 'tanh', 'selu',
-                    'elu', 'exponential', LeakyReLU,'relu']
+        activationL = ['relu',LeakyReLU, 'selu','elu','sigmoid','softplus','softsign','tanh','exponential']
         activation = activationL[round(params_nn_['activation'])]
         batch_size = round(params_nn_['batch_size'])
         epochs = round(params_nn_['epochs'])

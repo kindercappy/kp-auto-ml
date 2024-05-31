@@ -70,10 +70,18 @@ class ModelPerformance():
     score = None
     model_name = None
     RMSE = None
-    def __init__(self,score,model_name,RMSE = None) -> None:
+    total_columns = None
+    scaler_type = None
+    selected_features = None
+    num_of_clusters_if_used = None
+    def __init__(self,score,model_name,RMSE = None,total_columns = 0,scaler_type = None,selected_features = None,num_of_clsuters = None) -> None:
         self.model_name = model_name
         self.score = score
         self.RMSE = RMSE
+        self.total_columns = total_columns
+        self.scaler_type = scaler_type
+        self.selected_features = selected_features
+        self.num_of_clusters_if_used = num_of_clsuters
 
     def to_dict(self):
         return vars(self)
@@ -121,9 +129,10 @@ class NeuralNetwork_BayesianOptimization_Params():
                  ,normalization_min_max = (0,1)
                  ,dropout_rate_min_max = (0.2,0.6)
                  ,hidden_layers_min_max = (1,2)
-                 ,dropout_min_max = (0,1)):
+                 ,dropout_min_max = (0,1)
+                 ,activation_min_max = (0, 9) ):
         self.neurons_min_max = neurons_min_max
-        self.activation_min_max = (0, 9)
+        self.activation_min_max = activation_min_max
         self.optimizer_min_max = (0,6)
         self.learning_rate_min_max = learning_rate_min_max
         self.batch_size_min_max = batch_size_min_max
@@ -149,20 +158,44 @@ class ModelTrainer():
             if(skip_this_model):
                 continue
             model,param =get_model_and_param(power=mlh.ModelPower.HIGH,model_and_param=model_and_param)
-            for X_train, X_val, X_test in self.data.generate_permutations_train(min_columns=len(self.data.X_original.columns)-permutate_n_less_column):
+            for X_train, X_val, X_test,selected_columns in self.data.generate_permutations_train(min_columns=len(self.data.X_original.columns)-permutate_n_less_column):
                 best_param,best_model,score = train_test_random_search_regression(model=model,param_distributions=param,X_train=X_train,y_train=self.data.Y_train,X_test=X_val,y_test=self.data.Y_val)
+                self.predictor(model_and_param.name, best_param, best_model,X_test,selected_columns=selected_columns)
 
-                self.predictor(model_and_param.name, best_param, best_model, score)
-
-    def predictor(self, model_name, best_param, best_model, score):
-        y_pred = best_model.predict(self.data.X_test)
-                
+    def predictor(self, model_name, best_param, best_model,X_test,selected_columns = []):
         from sklearn.metrics import mean_squared_error
+        try:
+            total_columns = len(X_test[0])
+        except:
+            total_columns = len(X_test.columns)
+            
+        y_pred = best_model.predict(X_test)
+        test_score = best_model.score(X_test, self.data.Y_test)
 
         rmse = mean_squared_error(self.data.Y_test, y_pred, squared=False)
-        model_performance = ModelPerformance(score=score,model_name=model_name,RMSE=rmse)
+        num_of_clusters = extract_last_digit_from_list(selected_columns,'cluster')
+        model_performance = ModelPerformance(score=test_score,model_name=model_name,RMSE=rmse,total_columns=total_columns,scaler_type=type(self.data.Normalizer).__name__,selected_features=', '.join(selected_columns),num_of_clsuters=num_of_clusters)
         self.models.append(ModelMeta(best_model,best_param))
         self.performance_df = insert_object_columns(self.performance_df,model_performance)
+    def predict_test_data(self,X,model):
+        import numpy as np
+        X_result = None
+
+        if(self.data.create_clustering_feature_and_no_of_clusters[0]):
+            labels = self.data.only_predict(X,self.data.clustering_model)
+            if isinstance(X, pd.DataFrame):
+                X_result = X.copy()
+                X_result[f'cluster_{self.data.create_clustering_feature_and_no_of_clusters[1]}'] = labels
+            elif isinstance(X, np.ndarray):
+                X_result = np.hstack((X, labels.reshape(-1, 1)))
+            elif isinstance(X, list):
+                X_result = [row + [label] for row, label in zip(X, labels)]
+        
+        X_result = self.data.Data_transformer_pipe.transform(X_result)
+
+        predictions = model.predict(X_result)
+
+        return predictions
 
     def perform_neural_network_regression(self
                                           ,totalExperiments = 4
@@ -196,14 +229,26 @@ class ModelTrainer():
         init,iter = int(totalExperiments / 2),int(totalExperiments / 2)
         self.neural_network_bayesian_optimization.nn_maximised.maximize(init_points=init, n_iter=iter)
 
-    def neural_network_best_model(self):
+    def neural_network_best_model(self,epochs = None):
         params_nn = self.neural_network_bayesian_optimization.nn_maximised.max['params']
-        
+        if epochs is not None:
+            params_nn['epochs'] = epochs
         predictor = self.neural_network_bayesian_optimization.nn_regressor.get_best_model(params_nn)
         predictor.fit(self.data.X_train, self.data.Y_train)
-    
-        test_score = predictor.score(self.data.X_test, self.data.Y_test)
-
-        self.predictor(model_name='NeuralNetwork',best_model=predictor,best_param=predictor.get_params(),score=test_score)
+        self.predictor(model_name='NeuralNetwork',best_model=predictor,best_param=predictor.get_params(),X_test=self.data.X_test,selected_columns=self.data.Selected_Features)
 
     
+    
+def extract_last_digit_from_list(select_columns, match_string):
+    # Initialize last_digit as None
+    last_digit = None
+
+    # Iterate through each column name in select_columns
+    for column in select_columns:
+        # Check if match_string is present in the column name
+        if match_string in column:
+            # Extract the last digit from the matched column name
+            last_digit = column.split(match_string)[-1][-1]
+            break  # Exit the loop after finding the first match
+
+    return 0 if last_digit == None else int(last_digit)

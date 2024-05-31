@@ -16,6 +16,9 @@ def get_x_y(df:pd.DataFrame):
     Y = df.iloc[:,-1]
     return X,Y
 
+def get_X(df:pd.DataFrame):
+    return df.iloc[:,0:-1]
+
 def custom_train_val_test_df_split(df):
     X,Y = get_x_y(df)
     X_train,X_test,Y_train,Y_test = train_test_split(X,Y,test_size=.2,random_state=1)
@@ -78,6 +81,8 @@ class ModelTrainingData():
     Use_PCA = False
     Use_Polynomials = False
     Use_Feature_Selection = False
+    create_clustering_feature_and_no_of_clusters = None
+    clustering_model = None
     Selected_Features = []
     def __init__(self
                  ,df:pd.DataFrame
@@ -85,11 +90,14 @@ class ModelTrainingData():
                  ,pca_variance = .95,
                  use_pca = False,
                  use_polynomials = False,
-                 use_feature_selection = False
+                 use_feature_selection = False,
+                 create_clustering_feature_and_no_of_clusters = (False,3)
                  ) -> None:
         self.Use_PCA = use_pca
         self.Use_Polynomials = use_polynomials
         self.Use_Feature_Selection = use_feature_selection
+        self.create_clustering_feature_and_no_of_clusters = create_clustering_feature_and_no_of_clusters
+        self.Selected_Features = df.columns
         if(self.Use_Feature_Selection):
             tempX,tempY = get_x_y(df=df)
             columns_after_feature_selection = mfs.Run_Features_Selection(tempX,tempY)
@@ -100,6 +108,7 @@ class ModelTrainingData():
             print(f'Columns to use: {printable_names}')
             df = df[columns_after_feature_selection]
             self.Selected_Features = columns_after_feature_selection
+            
         self.X,self.Y = get_x_y(df=df)
         self.X_original = self.X.copy(deep=True)
         self.num_features = self.X_original.shape[1]
@@ -107,6 +116,8 @@ class ModelTrainingData():
         self.X_train,self.Y_train = get_x_y(self.X_train_df)
         self.X_val,self.Y_val = get_x_y(self.X_val_df)
         self.X_test,self.Y_test = get_x_y(self.X_test_df)
+        
+        self.X_train_df,self.X_test_df,self.X_val_df = get_X(self.X_train_df),get_X(self.X_test_df),get_X(self.X_val_df)
 
         self.Normalizer = get_scaler(scaler_type)
         self.Polynomializer = PolynomialFeatures(degree=2)
@@ -123,6 +134,21 @@ class ModelTrainingData():
             total_columns = pca_variance
         
         
+        if(create_clustering_feature_and_no_of_clusters[0]):
+            model = find_best_clustering_algorithm(self.X,num_clusters=create_clustering_feature_and_no_of_clusters[1])
+            self.X,self.X_train,self.X_test,self.X_val,self.X_original,self.X_train_df,self.X_test_df,self.X_val_df = perform_clustering_on_first(
+                self.X
+                ,self.X_train
+                ,self.X_test
+                ,self.X_val
+                ,self.X_original
+                ,self.X_train_df
+                ,self.X_test_df
+                ,self.X_val_df
+                ,num_clusters=create_clustering_feature_and_no_of_clusters[1]
+                ,model=model)
+            self.clustering_model = model
+            self.Selected_Features = self.X_train_df.columns
             
         self.Data_transformer_pipe = pipeline
         
@@ -133,12 +159,15 @@ class ModelTrainingData():
             self.X_test = self.Data_transformer_pipe.transform(self.X_test)
             self.X_val = self.Data_transformer_pipe.transform(self.X_val)
 
+            # self.X,self.X_train,self.X_test,self.X_val,self.X_original = perform_clustering_on_first(self.X,self.X_train,self.X_test,self.X_val,self.X_original)
+
         try:
             total_columns = len(self.X[0])
         except:
             total_columns = len(self.X.columns)
 
         print(f'Total columns being used after all data transformations: {total_columns}')
+
     def generate_permutations_train(self, min_columns):
         num_features = self.X_original.shape[1]
         total_permutations = sum(len(list(combinations(range(num_features), r))) for r in range(min_columns, num_features + 1))
@@ -157,12 +186,150 @@ class ModelTrainingData():
                     X_train_permuted = self.Data_transformer_pipe.fit_transform(self.X_train_df.loc[:, selected_columns])
                     X_val_permuted = self.Data_transformer_pipe.transform(self.X_val_df.loc[:, selected_columns])
                     X_test_permuted = self.Data_transformer_pipe.transform(self.X_test_df.loc[:, selected_columns])
-                yield X_train_permuted, X_val_permuted, X_test_permuted
+                yield X_train_permuted, X_val_permuted, X_test_permuted,selected_columns
 
-    def transform_test_data(self,df:pd.DataFrame):
-        return self.Data_transformer_pipe.transform(df)
-
-
-
+    def only_predict(self,X, clusterer):
+        labels = clusterer.predict(X) if hasattr(clusterer, 'predict') else clusterer.fit_predict(X)
+        return labels
 
 
+import pandas as pd
+import numpy as np
+from sklearn.cluster import KMeans
+
+def perform_clustering_on_first(*X_data, num_clusters=10,model):
+    if len(X_data) == 0:
+        raise ValueError("At least one dataset must be provided.")
+    
+    result_data = []
+    # return X_data
+    scores = list()
+    for X in X_data:
+        labels = fit_and_predict(X,model)
+        if isinstance(X, pd.DataFrame):
+            X_with_clusters = X.copy()
+            X_with_clusters[f'cluster_{num_clusters}'] = labels
+            result_data.append(X_with_clusters)
+        elif isinstance(X, np.ndarray):
+            X_with_clusters = np.hstack((X, labels.reshape(-1, 1)))
+            result_data.append(X_with_clusters)
+        elif isinstance(X, list):
+            X_with_clusters = [row + [label] for row, label in zip(X, labels)]
+            result_data.append(X_with_clusters)
+
+        from sklearn.metrics import silhouette_score
+        scores.append(silhouette_score(X, labels))
+
+    mean_score = sum(scores) / len(scores)
+    print(f'Mean score of all clusters is: {mean_score}')
+    return tuple(result_data)
+
+
+import numpy as np
+import pandas as pd
+from sklearn.cluster import KMeans, DBSCAN, AgglomerativeClustering
+from sklearn.metrics import silhouette_score
+
+def find_best_clustering_algorithm(X, num_clusters=10):
+    algorithms = {
+        'kmeans': tune_kmeans(X,num_clusters),
+        'agglomerative': tune_agglomerative(X,num_clusters),
+        # 'spectral': tune_spectral(X),
+        'mean_shift': tune_mean_shift(X),
+        'dbscan': tune_dbscan(X),
+        'birch': tune_birch(X),
+        'affinity_propagation': tune_affinity_propagation(X),
+        'mini_batch_kmeans': tune_mini_batch_kmeans(X,num_clusters)
+    }
+
+    best_score = -1
+    best_algo_name = None
+    best_algo = None
+    
+    for algo_name, clusterer in algorithms.items():
+        labels = fit_and_predict(X, clusterer)
+
+        num_labels = len(set(labels))
+        if num_labels < 2 or num_labels >= len(X):
+            print(f"Algorithm {algo_name} produced an invalid number of clusters: {num_labels}")
+            continue
+
+        score = silhouette_score(X, labels)
+        print(f'Mean score for {algo_name} is: {score}')
+        
+        if score > best_score:
+            best_score = score
+            best_algo_name = algo_name
+            best_algo = clusterer
+
+    print(f'Best algorithm: {best_algo_name} with a score of: {best_score}')
+    return algorithms[best_algo_name]
+
+def fit_and_predict(X, clusterer):
+    if hasattr(clusterer, 'predict'):
+        clusterer.fit(X)
+    else:
+        clusterer.fit_predict(X)
+    labels = clusterer.predict(X) if hasattr(clusterer, 'predict') else clusterer.fit_predict(X)
+    return labels
+
+
+
+import numpy as np
+import pandas as pd
+from sklearn.cluster import KMeans, DBSCAN, AgglomerativeClustering
+from sklearn.model_selection import GridSearchCV
+from sklearn.metrics import adjusted_rand_score, adjusted_mutual_info_score, completeness_score, homogeneity_score, v_measure_score
+from sklearn.cluster import KMeans, AgglomerativeClustering, SpectralClustering, MeanShift, DBSCAN, Birch, AffinityPropagation, MiniBatchKMeans
+
+def tune_kmeans(X, num_clusters=10):
+    print("Grid tuning in progress for KMeans...")
+    kmeans_params = {'n_clusters': [num_clusters], 'random_state': [42]}
+    kmeans = KMeans()
+    kmeans_gs = GridSearchCV(kmeans, kmeans_params, scoring=adjusted_rand_score)
+    kmeans_gs.fit(X)
+    return kmeans_gs.best_estimator_
+
+def tune_agglomerative(X, num_clusters=10):
+    print("Grid tuning in progress for Agglomerative Clustering...")
+    agglomerative_params = {'n_clusters': [num_clusters], 'linkage': ['ward', 'complete', 'average', 'single']}
+    agglomerative = AgglomerativeClustering()
+    agglomerative_gs = GridSearchCV(agglomerative, agglomerative_params, scoring=adjusted_rand_score)
+    agglomerative_gs.fit(X)
+    return agglomerative_gs.best_estimator_
+
+def tune_spectral(X, num_clusters_range=(3, 5)):
+    print("Grid tuning in progress for Spectral Clustering...")
+    spectral_params = {'n_clusters': list(range(*num_clusters_range))}
+    spectral = SpectralClustering()
+    spectral_gs = GridSearchCV(spectral, spectral_params, scoring=adjusted_rand_score)
+    spectral_gs.fit(X)
+    return spectral_gs.best_estimator_
+
+def tune_mean_shift(X):
+    # MeanShift does not require tuning hyperparameters
+    print("Mean Shift clustering does not require hyperparameter tuning.")
+    return MeanShift()
+
+def tune_dbscan(X):
+    # DBSCAN does not require tuning hyperparameters
+    print("DBSCAN clustering does not require hyperparameter tuning.")
+    return DBSCAN()
+
+def tune_birch(X):
+    # Birch does not require tuning hyperparameters
+    print("Birch clustering does not require hyperparameter tuning.")
+    return Birch()
+
+def tune_affinity_propagation(X):
+    # AffinityPropagation does not require tuning hyperparameters
+    print("Affinity Propagation clustering does not require hyperparameter tuning.")
+    return AffinityPropagation()
+
+def tune_mini_batch_kmeans(X,num_clusters=3):
+    print("Grid tuning in progress for Mini-Batch KMeans...")
+    mini_batch_kmeans_params = {'n_clusters': [num_clusters], 'random_state': [42]}
+    mini_batch_kmeans = MiniBatchKMeans()
+    mini_batch_kmeans_gs = GridSearchCV(mini_batch_kmeans, mini_batch_kmeans_params, scoring=adjusted_rand_score)
+    mini_batch_kmeans_gs.fit(X)
+    return mini_batch_kmeans_gs.best_estimator_

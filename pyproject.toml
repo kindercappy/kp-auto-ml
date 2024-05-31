@@ -1,6 +1,6 @@
 [project]
 name = "auto_ml_kinder"
-version = "0.0.7"
+version = "0.0.14"
 authors = [
   { name="Kinderpreet Singh", email="author@example.com" },
 ]

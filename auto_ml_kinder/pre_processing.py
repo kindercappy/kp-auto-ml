@@ -32,6 +32,7 @@ class PreProcessingConfig():
     numeric_cols_data_changer:list[PreNumericColDataChangeConfig]
     target_column:str
     exclude_columns:list[str]
+    is_classification = False
 
 
     def __init__(
@@ -41,12 +42,14 @@ class PreProcessingConfig():
             ,numeric_cols_data_changer:list[PreNumericColDataChangeConfig]
             ,exclude_columns
             ,target_column = None
+            ,is_classification = False
             ):
         self.encoding_dummies = encoding_dummies
         self.label_encode = label_encode
         self.numeric_cols_data_changer = numeric_cols_data_changer
         self.target_column = target_column
         self.exclude_columns = exclude_columns
+        self.is_classification = is_classification
 
 def fillna(df):
     print('Filling NA values with median and mode for numeria and non-numeric columns.')
@@ -113,7 +116,8 @@ def process(df:pd.DataFrame,model_config:PreProcessingConfig):
     df_preprocessing = df_preprocessing.drop(columns=model_config.exclude_columns)
     df_preprocessing = null_unsuable_values_cleaner(df_preprocessing)
     df_preprocessing = fillna(df_preprocessing)
-    df_preprocessing = handle_outliers_iqr(df_preprocessing,model_config.target_column)
+    if(model_config.is_classification == False):
+        df_preprocessing = handle_outliers_iqr(df_preprocessing,model_config.target_column)
     df_preprocessing = numeric_columns_data_changer(df_preprocessing, model_config.numeric_cols_data_changer)
     df_preprocessing = label_encoding(df_preprocessing,model_config.label_encode)
     df_preprocessing = encoding_dummies(df_preprocessing, model_config.encoding_dummies)

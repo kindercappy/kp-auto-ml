@@ -68,10 +68,11 @@ class ModelTrainingData():
     X_train:list = []
     X_val:list = []
     Y_train:list = []
-    Y_val:list = []
+    Y_train_neural_network:list = []
+    Y_val_neural_network:list = []
 
     X_test:list = []
-    Y_test:list = []
+    Y_test_neural_network:list = []
 
     Normalizer = None
     Polynomializer = None
@@ -84,6 +85,7 @@ class ModelTrainingData():
     create_clustering_feature_and_no_of_clusters = None
     clustering_model = None
     Selected_Features = []
+    is_classification = False
     def __init__(self
                  ,df:pd.DataFrame
                  ,scaler_type:ScalerType
@@ -91,13 +93,15 @@ class ModelTrainingData():
                  use_pca = False,
                  use_polynomials = False,
                  use_feature_selection = False,
-                 create_clustering_feature_and_no_of_clusters = (False,3)
+                 create_clustering_feature_and_no_of_clusters = (False,3),
+                 is_classification = False
                  ) -> None:
         self.Use_PCA = use_pca
         self.Use_Polynomials = use_polynomials
         self.Use_Feature_Selection = use_feature_selection
         self.create_clustering_feature_and_no_of_clusters = create_clustering_feature_and_no_of_clusters
         self.Selected_Features = df.columns
+        self.is_classification = is_classification
         if(self.Use_Feature_Selection):
             tempX,tempY = get_x_y(df=df)
             columns_after_feature_selection = mfs.Run_Features_Selection(tempX,tempY)
@@ -116,6 +120,10 @@ class ModelTrainingData():
         self.X_train,self.Y_train = get_x_y(self.X_train_df)
         self.X_val,self.Y_val = get_x_y(self.X_val_df)
         self.X_test,self.Y_test = get_x_y(self.X_test_df)
+
+        self.Y_train_neural_network = self.Y_train.copy()
+        self.Y_test_neural_network = self.Y_test.copy()
+        self.Y_val_neural_network = self.Y_val.copy()
         
         self.X_train_df,self.X_test_df,self.X_val_df = get_X(self.X_train_df),get_X(self.X_test_df),get_X(self.X_val_df)
 
@@ -167,6 +175,16 @@ class ModelTrainingData():
             total_columns = len(self.X.columns)
 
         print(f'Total columns being used after all data transformations: {total_columns}')
+
+        if(self.is_classification):
+            import keras as k
+            num_classes = len(np.unique(self.Y))
+            
+            if num_classes > 2:
+                print(f'Since num of classes is {num_classes} transforming Y_(test/train/val)_neural_network variables to categorical.')
+                self.Y_test_neural_networkst = k.utils.to_categorical(self.Y_test)
+                self.Y_train_neural_network = k.utils.to_categorical(self.Y_train)
+                self.Y_val_neural_network = k.utils.to_categorical(self.Y_val)
 
     def generate_permutations_train(self, min_columns):
         num_features = self.X_original.shape[1]

@@ -218,7 +218,7 @@ def get_parameters_knn_reg(power):
 
 
 
-class ModelAndParam(Enum):
+class ModelAndParamRegression(Enum):
     Linear_Regression = LinearRegression
     Ridge_Regression = Ridge
     Lasso_Regression = Lasso
@@ -229,3 +229,185 @@ class ModelAndParam(Enum):
     GradientBoosting_Regressor = GradientBoostingRegressor
     KNeighbors_Regressor = KNeighborsRegressor
 
+
+
+
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.svm import SVC
+from sklearn.linear_model import LogisticRegression, RidgeClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from enum import Enum
+
+class ModelPower(Enum):
+    LITE = 'li'
+    LOW = 'low'
+    MEDIUM = 'medium'
+    HIGH = 'high'
+
+def get_parameters_logistic_reg():
+    logistic_reg_hyper_params = {
+        'penalty': ['l1', 'l2', 'elasticnet', 'none'],
+        'C': [0.01, 0.1, 1.0, 10.0, 100.0],
+        'solver': ['liblinear', 'saga', 'lbfgs', 'newton-cg']
+    }
+    return logistic_reg_hyper_params, LogisticRegression()
+
+def get_parameters_ridge_classifier(power: ModelPower):
+    alpha_options = [0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 20.0]
+    if power == ModelPower.LOW:
+        alpha_options = [0.1, 0.5, 1.0]
+    elif power == ModelPower.MEDIUM:
+        alpha_options = [0.1, 0.5, 1.0, 2.0, 5.0]
+    elif power == ModelPower.LITE:
+        alpha_options = [0.1, 0.5]
+    elif power == ModelPower.HIGH:
+        alpha_options = [0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 20.0, 50.0, 100.0]
+
+    ridge_classifier_hyper_params = {
+        'alpha': alpha_options,
+        'solver': ['auto', 'svd', 'cholesky', 'lsqr', 'sparse_cg', 'sag', 'saga']
+    }
+    return ridge_classifier_hyper_params, RidgeClassifier()
+
+def get_parameters_svc_fit(power: ModelPower):
+    kernel_options = ['linear', 'poly', 'rbf', 'sigmoid']
+    if power == ModelPower.LOW:
+        C_options = [0.1, 1.0]
+        gamma_options = ['scale']
+    elif power == ModelPower.MEDIUM:
+        C_options = [0.1, 1.0, 10.0]
+        gamma_options = ['scale', 'auto']
+    elif power == ModelPower.LITE:
+        C_options = [0.1, 1.0]
+        gamma_options = ['scale']
+    elif power == ModelPower.HIGH:
+        C_options = [0.1, 1.0, 10.0, 100.0]
+        gamma_options = ['scale', 'auto']
+
+    svc_hyper_params = {
+        'kernel': kernel_options,
+        'C': C_options,
+        'gamma': gamma_options
+    }
+    return svc_hyper_params, SVC()
+
+def get_parameters_decision_tree_classifier(power: ModelPower):
+    max_depth_options = [None, 5, 10, 20]
+    min_samples_split_options = [2, 5, 10]
+    if power == ModelPower.LOW:
+        max_depth_options = [None, 5]
+        min_samples_split_options = [2, 5]
+    elif power == ModelPower.MEDIUM:
+        max_depth_options = [None, 5, 10]
+        min_samples_split_options = [2, 5, 10]
+    elif power == ModelPower.LITE:
+        max_depth_options = [None]
+        min_samples_split_options = [2]
+    elif power == ModelPower.HIGH:
+        max_depth_options = [None, 5, 10, 20, 50]
+        min_samples_split_options = [2, 5, 10, 20]
+
+    decision_tree_hyper_params = {
+        'max_depth': max_depth_options,
+        'min_samples_split': min_samples_split_options,
+        'min_samples_leaf': [1, 2, 4],
+        'max_features': ['sqrt', 'log2']
+    }
+    return decision_tree_hyper_params, DecisionTreeClassifier()
+
+def get_parameters_random_forest_classifier(power: ModelPower):
+    n_estimators_options = [50, 100, 200]
+    max_depth_options = [None, 5, 10, 20]
+    min_samples_split_options = [2, 5, 10]
+    if power == ModelPower.LOW:
+        n_estimators_options = [50, 100]
+        max_depth_options = [None, 5]
+        min_samples_split_options = [2, 5]
+    elif power == ModelPower.MEDIUM:
+        n_estimators_options = [50, 100, 200]
+        max_depth_options = [None, 5, 10]
+        min_samples_split_options = [2, 5, 10]
+    elif power == ModelPower.LITE:
+        n_estimators_options = [50]
+        max_depth_options = [None]
+        min_samples_split_options = [2]
+    elif power == ModelPower.HIGH:
+        n_estimators_options = [50, 100, 200, 500]
+        max_depth_options = [None, 5, 10, 20]
+        min_samples_split_options = [2, 5, 10, 20]
+
+    random_forest_hyper_params = {
+        'n_estimators': n_estimators_options,
+        'max_depth': max_depth_options,
+        'min_samples_split': min_samples_split_options,
+        'min_samples_leaf': [1, 2, 4],
+        'max_features': ['sqrt', 'log2']
+    }
+    return random_forest_hyper_params, RandomForestClassifier()
+
+def get_parameters_gradient_boosting_classifier(power: ModelPower):
+    n_estimators_options = [50, 100, 200]
+    learning_rate_options = [0.01, 0.1, 0.5]
+    max_depth_options = [3, 5, 7]
+    min_samples_split_options = [2, 5, 10]
+    if power == ModelPower.LOW:
+        n_estimators_options = [50, 100]
+        learning_rate_options = [0.01, 0.1]
+        max_depth_options = [3, 5]
+        min_samples_split_options = [2, 5]
+    elif power == ModelPower.MEDIUM:
+        n_estimators_options = [50, 100, 200]
+        learning_rate_options = [0.01, 0.1, 0.5]
+        max_depth_options = [3, 5, 7]
+        min_samples_split_options = [2, 5, 10]
+    elif power == ModelPower.LITE:
+        n_estimators_options = [50]
+        learning_rate_options = [0.01]
+        max_depth_options = [3]
+        min_samples_split_options = [2]
+    elif power == ModelPower.HIGH:
+        n_estimators_options = [50, 100, 200, 500]
+        learning_rate_options = [0.01, 0.1, 0.5]
+        max_depth_options = [3, 5, 7, 10]
+        min_samples_split_options = [2, 5, 10, 20]
+
+    gradient_boosting_hyper_params = {
+        'n_estimators': n_estimators_options,
+        'learning_rate': learning_rate_options,
+        'max_depth': max_depth_options,
+        'min_samples_split': min_samples_split_options,
+        'min_samples_leaf': [1, 2, 4],
+        'max_features': ['auto', 'sqrt', 'log2']
+    }
+    return gradient_boosting_hyper_params, GradientBoostingClassifier()
+
+def get_parameters_knn_classifier(power: ModelPower):
+    n_neighbors_values = [3, 5, 7, 10, 15]
+    weights_options = ['uniform', 'distance']
+    
+    if power == ModelPower.LOW:
+        n_neighbors_values = [3, 5, 7]
+    elif power == ModelPower.MEDIUM:
+        n_neighbors_values = [3, 5, 7, 10]
+    elif power == ModelPower.LITE:
+        n_neighbors_values = [3, 5]
+    elif power == ModelPower.HIGH:
+        n_neighbors_values = [3, 5, 7, 10, 15, 20]
+    
+    knn_hyper_params = {
+        'n_neighbors': n_neighbors_values,
+        'weights': weights_options
+    }
+    
+    return knn_hyper_params, KNeighborsClassifier()
+
+
+class ModelAndParamClassifiction(Enum):
+    Logistic_Regression = LogisticRegression
+    Ridge_Classifiction = RidgeClassifier
+    SVC_Classification = SVC
+    DecisionTree_Classifiction = DecisionTreeClassifier
+    RandomForest_Classifiction = RandomForestClassifier
+    GradientBoosting_Classifiction = GradientBoostingClassifier
+    KNeighbors_Classifiction = KNeighborsClassifier

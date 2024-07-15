@@ -49,11 +49,11 @@ class NeuralNetwork_Classification():
         num_classes = len(np.unique(self.data.Y))
     
         if num_classes == 2:
-            print(f'Total number of classes: {num_classes} using sigmoid as activation')
+            # print(f'Total number of classes: {num_classes} using sigmoid as activation')
             nn.add(Dense(1, activation='sigmoid'))
             nn.compile(optimizer=optimizer, loss='binary_crossentropy', metrics=['accuracy'])
         else:
-            print(f'Total number of classes: {num_classes} using softmax as activation')
+            # print(f'Total number of classes: {num_classes} using softmax as activation')
             nn.add(Dense(num_classes, activation='softmax'))
             nn.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=['accuracy'])
 
@@ -144,7 +144,7 @@ class NeuralNetwork_Classification():
         nn_keras_classifier = KerasClassifier(build_fn=get_build_function, epochs=epochs, batch_size=batch_size,verbose=0)
 
         num_classes = len(np.unique(self.data.Y))
-        if(num_classes > 2):
+        if(num_classes > 1):
             nn_keras_classifier.fit(self.data.X_train, self.data.Y_train_neural_network, validation_data=(self.data.X_val, self.data.Y_val_neural_network), verbose=1, callbacks=[es,lr_scheduler])
         else:
             nn_keras_classifier.fit(self.data.X_train, self.data.Y_train, validation_data=(self.data.X_val, self.data.Y_val), verbose=1, callbacks=[es,lr_scheduler])

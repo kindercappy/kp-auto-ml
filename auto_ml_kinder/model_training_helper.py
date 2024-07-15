@@ -229,18 +229,14 @@ class ModelTrainer():
             total_columns = len(X_test.columns)
         
         y_pred = best_model.predict(X_test)
-        
-        # test_score = best_model.score(X_test, self.data.Y_test)
-        y_pred_int = np.argmax(y_pred, axis=1)
-        y_test_int = np.argmax(self.data.Y_test_neural_network, axis=1)
-        
-        accuracy = accuracy_score(self.data.Y_test, y_pred_int)
-        f1 = f1_score(self.data.Y_test, y_pred_int, average='weighted')
+        test_score = best_model.score(X_test, self.data.Y_test)
+        accuracy = accuracy_score(self.data.Y_test, y_pred)
+        f1 = f1_score(self.data.Y_test, y_pred, average='weighted')
 
         num_of_clusters = extract_last_digit_from_list(selected_columns, 'cluster')
         
         model_performance = ModelPerformance(
-            score=None,
+            score=test_score,
             model_name=model_name,
             accuracy=accuracy,
             f1_score=f1,
@@ -374,7 +370,38 @@ class ModelTrainer():
             predictor.fit(self.data.X_train, self.data.Y_train_neural_network)
         else:
             predictor.fit(self.data.X_train, self.data.Y_train)
-        self.predictor_classification(model_name='NeuralNetwork',best_model=predictor,best_param=predictor.get_params(),X_test=self.data.X_test,selected_columns=self.data.Selected_Features) 
+        self.predictor_neural_network_classification(model_name='NeuralNetwork',best_model=predictor,best_param=predictor.get_params(),X_test=self.data.X_test,selected_columns=self.data.Selected_Features)
+
+    def predictor_neural_network_classification(self, model_name, best_param, best_model, X_test, selected_columns=[]):
+        from sklearn.metrics import accuracy_score, f1_score
+        import numpy as np
+        try:
+            total_columns = len(X_test[0])
+        except:
+            total_columns = len(X_test.columns)
+        
+        y_pred = best_model.predict(X_test)
+        y_pred_int = np.argmax(y_pred, axis=1).astype(np.float32)
+        y_test_int = np.argmax(self.data.Y_test_neural_network, axis=1).astype(np.float32)
+        test_score = best_model.score(X_test, self.data.Y_test_neural_network)
+        accuracy = accuracy_score(y_test_int, y_pred_int)
+        f1 = f1_score(y_test_int, y_pred_int, average='weighted')
+
+        num_of_clusters = extract_last_digit_from_list(selected_columns, 'cluster')
+        
+        model_performance = ModelPerformance(
+            score=test_score,
+            model_name=model_name,
+            accuracy=accuracy,
+            f1_score=f1,
+            total_columns=total_columns,
+            scaler_type=type(self.data.Normalizer).__name__,
+            selected_features=', '.join(selected_columns),
+            num_of_clusters=num_of_clusters
+        )
+        
+        self.models.append(ModelMeta(best_model, best_param))
+        self.performance_df = insert_object_columns(self.performance_df, model_performance)
     
 def extract_last_digit_from_list(select_columns, match_string):
     # Initialize last_digit as None

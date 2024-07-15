@@ -182,7 +182,7 @@ class ModelTrainingData():
             
             if num_classes > 2:
                 print(f'Since num of classes is {num_classes} transforming Y_(test/train/val)_neural_network variables to categorical.')
-                self.Y_test_neural_networkst = k.utils.to_categorical(self.Y_test)
+                self.Y_test_neural_network = k.utils.to_categorical(self.Y_test)
                 self.Y_train_neural_network = k.utils.to_categorical(self.Y_train)
                 self.Y_val_neural_network = k.utils.to_categorical(self.Y_val)
 

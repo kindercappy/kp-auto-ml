@@ -10,6 +10,7 @@ model_files = {
     'model_training_data_prep': os.path.join(script_dir, 'auto_ml_kinder', 'model_training_data_prep.py'),
     'model_training_helper': os.path.join(script_dir, 'auto_ml_kinder', 'model_training_helper.py'),
     'neural_network_regression': os.path.join(script_dir, 'auto_ml_kinder', 'neural_network_regression.py'),
+    'neural_network_classification': os.path.join(script_dir, 'auto_ml_kinder', 'neural_network_classification.py'),
     'pre_processing': os.path.join(script_dir, 'auto_ml_kinder', 'pre_processing.py'),
     '__init__': os.path.join(script_dir, 'auto_ml_kinder', '__init__.py'),
     'README': os.path.join(script_dir, 'README.md'),
@@ -29,6 +30,7 @@ shutil.copyfile(model_files['model_list_helper'], os.path.join(packaging_src_aut
 shutil.copyfile(model_files['model_training_data_prep'], os.path.join(packaging_src_auto_ml_kinder, 'model_training_data_prep.py'))
 shutil.copyfile(model_files['model_training_helper'], os.path.join(packaging_src_auto_ml_kinder, 'model_training_helper.py'))
 shutil.copyfile(model_files['neural_network_regression'], os.path.join(packaging_src_auto_ml_kinder, 'neural_network_regression.py'))
+shutil.copyfile(model_files['neural_network_classification'], os.path.join(packaging_src_auto_ml_kinder, 'neural_network_classification.py'))
 shutil.copyfile(model_files['pre_processing'], os.path.join(packaging_src_auto_ml_kinder, 'pre_processing.py'))
 shutil.copyfile(model_files['__init__'], os.path.join(packaging_src_auto_ml_kinder, '__init__.py'))
 

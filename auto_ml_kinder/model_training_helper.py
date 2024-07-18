@@ -381,8 +381,16 @@ class ModelTrainer():
             total_columns = len(X_test.columns)
         
         y_pred = best_model.predict(X_test)
-        y_pred_int = np.argmax(y_pred, axis=1).astype(np.float32)
-        y_test_int = np.argmax(self.data.Y_test_neural_network, axis=1).astype(np.float32)
+        if y_pred.ndim == 1:# because we have only single neuron in last layer then prediction will be single value
+            y_pred_int = y_pred
+        else:# we have more than 1 neuron in last layer then prediction will be multiple then get max value
+            y_pred_int = np.argmax(y_pred, axis=1).astype(np.float32)
+        
+        if y_pred.ndim == 1:# because we have only single neuron in last layer then prediction will be single value
+            y_test_int = self.data.Y_test_neural_network
+        else:# we have more than 1 neuron in last layer then prediction will be multiple then get max value
+            y_test_int = np.argmax(self.data.Y_test_neural_network, axis=1).astype(np.float32)
+
         test_score = best_model.score(X_test, self.data.Y_test_neural_network)
         accuracy = accuracy_score(y_test_int, y_pred_int)
         f1 = f1_score(y_test_int, y_pred_int, average='weighted')

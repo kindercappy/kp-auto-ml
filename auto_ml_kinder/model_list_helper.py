@@ -8,12 +8,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.linear_model import Ridge
 from sklearn.linear_model import Lasso
 from sklearn.neighbors import KNeighborsRegressor
-
-class ModelPower(Enum):
-    LITE = 'li'
-    LOW = 'low'
-    MEDIUM = 'medium'
-    HIGH = 'high'
+from auto_ml_kinder.classes.ModelPower import ModelPower
 
 def get_parameters_linear_reg():
     linear_reg_hyper_params = {
@@ -217,33 +212,12 @@ def get_parameters_knn_reg(power):
     return knn_reg_hyper_params, KNeighborsRegressor()
 
 
-
-class ModelAndParamRegression(Enum):
-    Linear_Regression = LinearRegression
-    Ridge_Regression = Ridge
-    Lasso_Regression = Lasso
-    ElasticNet_Regression = ElasticNet
-    SVR_Regression = SVR
-    DecisionTree_Regressor = DecisionTreeRegressor
-    RandomForest_Regressor = RandomForestRegressor
-    GradientBoosting_Regressor = GradientBoostingRegressor
-    KNeighbors_Regressor = KNeighborsRegressor
-
-
-
-
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegression, RidgeClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from enum import Enum
-
-class ModelPower(Enum):
-    LITE = 'li'
-    LOW = 'low'
-    MEDIUM = 'medium'
-    HIGH = 'high'
 
 def get_parameters_logistic_reg():
     logistic_reg_hyper_params = {
@@ -403,11 +377,3 @@ def get_parameters_knn_classifier(power: ModelPower):
     return knn_hyper_params, KNeighborsClassifier()
 
 
-class ModelAndParamClassifiction(Enum):
-    Logistic_Regression = LogisticRegression
-    Ridge_Classifiction = RidgeClassifier
-    SVC_Classification = SVC
-    DecisionTree_Classifiction = DecisionTreeClassifier
-    RandomForest_Classifiction = RandomForestClassifier
-    GradientBoosting_Classifiction = GradientBoostingClassifier
-    KNeighbors_Classifiction = KNeighborsClassifier
